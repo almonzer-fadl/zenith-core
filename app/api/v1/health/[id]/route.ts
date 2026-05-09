@@ -3,65 +3,13 @@ import { collections } from "@/db/collections";
 import { handleApiError, ok, ApiError } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
 import { assertObjectId } from "@/app/api/v1/health/route";
+import { decryptText, encryptText } from "@/lib/crypto";
+import { env } from "@/lib/env";
+import { auditLog } from "@/lib/audit";
+import { getRequestId } from "@/lib/observability";
 
-const updateHealthSchema = z.object({
-  loggedAt: z.coerce.date().optional(),
-  stressLevel: z.number().int().min(1).max(10).optional(),
-  sleepHours: z.number().min(0).max(24).optional(),
-  restingHr: z.number().int().min(20).max(260).nullable().optional(),
-  bodyWeightKg: z.number().min(1).max(500).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-});
+const updateHealthSchema = z.object({ loggedAt: z.coerce.date().optional(), stressLevel: z.number().int().min(1).max(10).optional(), sleepHours: z.number().min(0).max(24).optional(), restingHr: z.number().int().min(20).max(260).nullable().optional(), bodyWeightKg: z.number().min(1).max(500).nullable().optional(), notes: z.string().max(2000).nullable().optional() });
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const userId = await requireBearerUserId(request);
-    const { id } = await params;
-
-    const c = await collections();
-    const item = await c.healthLogs.findOne({ _id: assertObjectId(id), userId });
-    if (!item) throw new ApiError(404, "NOT_FOUND", "Health log not found");
-
-    return ok(item);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const userId = await requireBearerUserId(request);
-    const body = updateHealthSchema.parse(await request.json());
-    const { id } = await params;
-
-    const c = await collections();
-    const result = await c.healthLogs.findOneAndUpdate(
-      { _id: assertObjectId(id), userId },
-      { $set: { ...body, updatedAt: new Date() } },
-      { returnDocument: "after" }
-    );
-
-    if (!result) throw new ApiError(404, "NOT_FOUND", "Health log not found");
-    return ok(result);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const userId = await requireBearerUserId(request);
-    const { id } = await params;
-
-    const c = await collections();
-    const result = await c.healthLogs.deleteOne({ _id: assertObjectId(id), userId });
-
-    if (result.deletedCount !== 1) {
-      throw new ApiError(404, "NOT_FOUND", "Health log not found");
-    }
-
-    return ok({ deleted: true });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const { id } = await params; const c = await collections(); const item = await c.healthLogs.findOne({ _id: assertObjectId(id), userId }); if (!item) throw new ApiError(404, "NOT_FOUND", "Health log not found"); return ok({ ...item, notes: item.notes ? decryptText(item.notes, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const body = updateHealthSchema.parse(await request.json()); const { id } = await params; const patch: Record<string, unknown> = { updatedAt: new Date() }; if (body.loggedAt) patch.loggedAt = body.loggedAt; if (body.stressLevel !== undefined) patch.stressLevel = body.stressLevel; if (body.sleepHours !== undefined) patch.sleepHours = body.sleepHours; if (body.restingHr !== undefined) patch.restingHr = body.restingHr; if (body.bodyWeightKg !== undefined) patch.bodyWeightKg = body.bodyWeightKg; if (body.notes !== undefined) patch.notes = body.notes == null ? null : encryptText(body.notes, env.FIELD_ENCRYPTION_SECRET); const c = await collections(); const result = await c.healthLogs.findOneAndUpdate({ _id: assertObjectId(id), userId }, { $set: patch }, { returnDocument: "after" }); if (!result) throw new ApiError(404, "NOT_FOUND", "Health log not found"); await auditLog({ userId, action: "health.update", entity: "health_logs", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") }); return ok({ ...result, notes: result.notes ? decryptText(result.notes, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const { id } = await params; const c = await collections(); const result = await c.healthLogs.deleteOne({ _id: assertObjectId(id), userId }); if (result.deletedCount !== 1) throw new ApiError(404, "NOT_FOUND", "Health log not found"); await auditLog({ userId, action: "health.delete", entity: "health_logs", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") }); return ok({ deleted: true }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }

@@ -19,7 +19,7 @@ export async function ensureIndexes() {
     c.spiritualLogs.createIndex({ userId: 1, timestamp: -1 }),
     c.quranMemorization.createIndex({ userId: 1, updatedAt: -1 }),
     c.pushSubscriptions.createIndex({ userId: 1 }),
-    c.pushSubscriptions.createIndex({ endpoint: 1 }, { unique: true }),
+    c.pushSubscriptions.createIndex({ endpoint: 1 }),
     c.healthLogs.createIndex({ userId: 1, loggedAt: -1 }),
     c.athleticLogs.createIndex({ userId: 1, loggedAt: -1 }),
     c.moneyEntries.createIndex({ userId: 1, loggedAt: -1 }),

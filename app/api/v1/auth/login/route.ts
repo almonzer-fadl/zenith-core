@@ -1,29 +1,45 @@
 import { z } from "zod";
+import { auditLog } from "@/lib/audit";
 import { handleApiError, ok, ApiError } from "@/lib/api";
-import { issueAccessToken, issueRefreshToken, verifyAppPassword } from "@/lib/auth";
+import { issueAccessToken, issueRefreshToken, verifyUserCredentials } from "@/lib/auth";
+import { collections } from "@/db/collections";
+import { env } from "@/lib/env";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { getRequestId } from "@/lib/observability";
+import bcrypt from "bcryptjs";
 
-const loginSchema = z.object({
-  password: z.string().min(1),
-});
+const loginSchema = z.object({ email: z.string().email().optional(), password: z.string().min(1), deviceName: z.string().max(120).optional() });
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
   try {
+    const ip = request.headers.get("x-forwarded-for") ?? "local";
+    await enforceRateLimit({ key: `login:${ip}`, windowSec: 60, max: 10 });
     const body = loginSchema.parse(await request.json());
-    const isValid = await verifyAppPassword(body.password);
 
-    if (!isValid) {
-      throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials");
+    let user = body.email ? await verifyUserCredentials(body.email, body.password) : null;
+
+    if (!user && !body.email && env.APP_PASSWORD && body.password === env.APP_PASSWORD) {
+      const c = await collections();
+      user = await c.users.findOne({ email: env.OWNER_EMAIL.toLowerCase() });
+      if (!user) {
+        const now = new Date();
+        const passwordHash = await bcrypt.hash(env.OWNER_PASSWORD, 12);
+        const result = await c.users.insertOne({ userId: "system", email: env.OWNER_EMAIL.toLowerCase(), passwordHash, role: "owner", isActive: true, createdAt: now, updatedAt: now });
+        user = await c.users.findOne({ _id: result.insertedId });
+      }
     }
 
-    const userId = "owner";
-    const accessToken = await issueAccessToken(userId);
-    const refreshToken = await issueRefreshToken(userId, {
-      userAgent: request.headers.get("user-agent"),
-      ip: request.headers.get("x-forwarded-for"),
-    });
+    if (!user) throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials");
 
-    return ok({ accessToken, refreshToken, tokenType: "Bearer", userId });
+    const userId = user._id!.toString();
+    const accessToken = await issueAccessToken(userId);
+    const refreshToken = await issueRefreshToken(userId, { userAgent: request.headers.get("user-agent"), ip, deviceName: body.deviceName ?? null });
+
+    await auditLog({ userId, action: "auth.login", entity: "session", requestId, ip, userAgent: request.headers.get("user-agent") });
+
+    return ok({ accessToken, refreshToken, tokenType: "Bearer", userId, email: user.email, role: user.role }, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }

@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:indexes": "tsx scripts/create-indexes.ts"
+    "db:indexes": "tsx scripts/create-indexes.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed-owner": "tsx scripts/seed-owner.ts",
+    "test:integration": "tsx tests/integration/smoke.ts"
   },
   "dependencies": {
     "@types/web-push": "^3.6.4",

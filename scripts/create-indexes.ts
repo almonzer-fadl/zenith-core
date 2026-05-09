@@ -1,7 +1,8 @@
-import "dotenv/config";
-import { ensureIndexes } from "@/db/indexes";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
 async function main() {
+  const { ensureIndexes } = await import("@/db/indexes");
   await ensureIndexes();
   console.log("Indexes ensured");
 }
