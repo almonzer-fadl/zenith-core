@@ -1,92 +1,89 @@
-# Axone Panel
+# Zenith Core
 
-Axone Panel is a personal health and performance dashboard built with Next.js 16, React 19, MongoDB, and Tailwind CSS 4.
-
-It combines multiple logs (biometrics, telemetry, sleep, nutrition, health, and spiritual tracking) into one authenticated panel, with optional web push notifications and PWA install support.
+Zenith Core is the backend-for-frontend API for Zenith clients (starting with iOS Swift).
 
 ## Stack
 
-- Next.js 16 (App Router)
-- React 19
-- TypeScript
+- Next.js 16 App Router (Route Handlers)
+- Node.js runtime
 - MongoDB
-- Tailwind CSS 4
-- Recharts
-- Web Push (`web-push`)
-- Vercel Analytics
+- JWT access tokens + rotating refresh tokens
+- Zod request validation
 
-## Features
+## Environment
 
-- Password-protected access using signed cookie sessions
-- Dashboard summary with latest biometrics, exertion, and sleep
-- Logging flows for:
-  - Biometrics
-  - Telemetry
-  - Nutrition
-  - Health
-  - Sleep
-  - Spiritual progress
-- Reports and charting
-- PWA manifest/service worker assets
-- Push subscription endpoints and notification trigger endpoint
-
-## Project Structure
-
-- `app/`: App Router pages, API routes, server actions
-- `components/`: shared UI components
-- `db/`: MongoDB connection and schema helpers
-- `lib/`: auth, analytics, and push subscription persistence
-- `public/`: PWA/service worker/static assets
-- `scripts/`: utility scripts (for example seed scripts)
-
-## Environment Variables
-
-Create a `.env.local` file:
+Create `.env.local`:
 
 ```bash
 MONGODB_URI="mongodb://localhost:27017"
-MONGODB_DB="axone"
+MONGODB_DB="zenith_core"
 
-AUTH_SECRET="replace-with-a-long-random-secret"
-APP_PASSWORD="replace-with-your-login-password"
+AUTH_SECRET="replace-with-very-long-random-secret-min-32"
+APP_PASSWORD="replace-with-strong-password"
 
-NEXT_PUBLIC_VAPID_PUBLIC_KEY=""
-VAPID_PRIVATE_KEY=""
+ACCESS_TOKEN_TTL_SECONDS="900"
+REFRESH_TOKEN_TTL_SECONDS="2592000"
 ```
-
-Notes:
-
-- `AUTH_SECRET` is required for signing/verifying session cookies.
-- `APP_PASSWORD` is the password used on the auth page.
-- VAPID keys are required for push subscription and notification features.
-
-## Install
-
-```bash
-npm install
-```
-
-## Run
-
-```bash
-npm run dev
-```
-
-Then open `http://localhost:3000`.
 
 ## Scripts
 
-- `npm run dev`: start dev server (`0.0.0.0`)
-- `npm run build`: production build
-- `npm run start`: run built app
-- `npm run lint`: run ESLint
+- `npm run dev` start dev server
+- `npm run lint` lint
+- `npm run build` production build
+- `npm run db:indexes` create required Mongo indexes
 
-## API Endpoints
+## Auth Flow (iOS)
 
-- `POST /api/push`: save web push subscription
-- `DELETE /api/push`: remove web push subscription
-- `POST /api/trigger-notification`: send a test/triggered notification
+1. `POST /api/v1/auth/login` with app password
+2. Store `accessToken` + `refreshToken` securely in Keychain
+3. Send `Authorization: Bearer <accessToken>` on protected requests
+4. On 401, call `POST /api/v1/auth/refresh`
+5. Replace both tokens with rotated values
+6. `POST /api/v1/auth/logout` to revoke refresh token
 
-## Deployment
+## API v1
 
-Deploy on any Node.js-compatible platform that supports Next.js 16 and environment variables (for example Vercel). Ensure MongoDB and all required env vars are configured in the target environment.
+### Auth
+
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+
+### Health Logs
+
+- `GET /api/v1/health?page=1&limit=20&from=ISO&to=ISO`
+- `POST /api/v1/health`
+- `GET /api/v1/health/:id`
+- `PATCH /api/v1/health/:id`
+- `DELETE /api/v1/health/:id`
+
+### Athletic Logs
+
+- `GET /api/v1/athletic?page=1&limit=20&from=ISO&to=ISO`
+- `POST /api/v1/athletic`
+- `GET /api/v1/athletic/:id`
+- `PATCH /api/v1/athletic/:id`
+- `DELETE /api/v1/athletic/:id`
+
+### Money Entries
+
+- `GET /api/v1/money?page=1&limit=20&from=ISO&to=ISO`
+- `POST /api/v1/money`
+- `GET /api/v1/money/:id`
+- `PATCH /api/v1/money/:id`
+- `DELETE /api/v1/money/:id`
+
+## Standard Response Shape
+
+Success:
+
+```json
+{ "success": true, "data": {} }
+```
+
+Failure:
+
+```json
+{ "success": false, "error": { "code": "...", "message": "..." } }
+```

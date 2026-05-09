@@ -1,0 +1,68 @@
+import { z } from "zod";
+import { collections } from "@/db/collections";
+import { handleApiError, ok, ApiError } from "@/lib/api";
+import { requireBearerUserId } from "@/lib/auth";
+import { assertObjectId } from "@/app/api/v1/health/route";
+
+const updateAthleticSchema = z.object({
+  loggedAt: z.coerce.date().optional(),
+  activityType: z.enum(["run", "walk", "cycle", "swim", "gym", "other"]).optional(),
+  durationMin: z.number().int().min(1).max(3000).optional(),
+  distanceKm: z.number().min(0).max(2000).nullable().optional(),
+  avgHr: z.number().int().min(20).max(260).nullable().optional(),
+  rpe: z.number().int().min(1).max(10).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userId = await requireBearerUserId(request);
+    const { id } = await params;
+
+    const c = await collections();
+    const item = await c.athleticLogs.findOne({ _id: assertObjectId(id), userId });
+    if (!item) throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
+
+    return ok(item);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userId = await requireBearerUserId(request);
+    const body = updateAthleticSchema.parse(await request.json());
+    const { id } = await params;
+
+    const c = await collections();
+    const result = await c.athleticLogs.findOneAndUpdate(
+      { _id: assertObjectId(id), userId },
+      { $set: { ...body, updatedAt: new Date() } },
+      { returnDocument: "after" }
+    );
+
+    if (!result) throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
+    return ok(result);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userId = await requireBearerUserId(request);
+    const { id } = await params;
+
+    const c = await collections();
+    const result = await c.athleticLogs.deleteOne({ _id: assertObjectId(id), userId });
+
+    if (result.deletedCount !== 1) {
+      throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
+    }
+
+    return ok({ deleted: true });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
