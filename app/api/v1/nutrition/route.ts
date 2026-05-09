@@ -1,0 +1,10 @@
+import { z } from "zod";
+import { collections } from "@/db/collections";
+import { handleApiError, ok } from "@/lib/api";
+import { requireBearerUserId } from "@/lib/auth";
+import { parseListQuery } from "@/lib/query";
+
+const schema = z.object({ timestamp: z.coerce.date().optional(), itemName: z.string().min(1), itemType: z.enum(["food", "drink"]).default("food"), quantity: z.union([z.string(), z.number()]), unit: z.string().min(1), carbsGrams: z.union([z.string(), z.number()]), proteinGrams: z.union([z.string(), z.number()]).nullable().optional(), fatGrams: z.union([z.string(), z.number()]).nullable().optional(), calories: z.union([z.string(), z.number()]).nullable().optional(), mealType: z.string().nullable().optional(), notes: z.string().nullable().optional() });
+
+export async function GET(request: Request) { try { const userId = await requireBearerUserId(request); const { page, limit } = parseListQuery(new URL(request.url)); const skip = (page - 1) * limit; const c = await collections(); const [items, total] = await Promise.all([c.nutrition.find({ userId }).sort({ timestamp: -1 }).skip(skip).limit(limit).toArray(), c.nutrition.countDocuments({ userId })]); return ok({ items, pagination: { page, limit, total } }); } catch (error) { return handleApiError(error); } }
+export async function POST(request: Request) { try { const userId = await requireBearerUserId(request); const body = schema.parse(await request.json()); const now = new Date(); const doc = { userId, timestamp: body.timestamp ?? now, itemName: body.itemName, itemType: body.itemType, quantity: Number(body.quantity), unit: body.unit, carbsGrams: Number(body.carbsGrams), proteinGrams: body.proteinGrams == null ? null : Number(body.proteinGrams), fatGrams: body.fatGrams == null ? null : Number(body.fatGrams), calories: body.calories == null ? null : Number(body.calories), mealType: body.mealType ?? null, notes: body.notes ?? null, createdAt: now, updatedAt: now }; const c = await collections(); const result = await c.nutrition.insertOne(doc); return ok({ id: result.insertedId.toString(), ...doc }, 201); } catch (error) { return handleApiError(error); } }
