@@ -4,6 +4,14 @@ export async function ensureIndexes() {
   const c = await collections();
 
   await Promise.all([
+    c.users.createIndex({ email: 1 }, { unique: true }),
+    c.sessions.createIndex({ userId: 1, createdAt: -1 }),
+    c.sessions.createIndex({ refreshTokenHash: 1 }, { unique: true }),
+    c.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    c.rateLimits.createIndex({ key: 1, createdAt: 1 }),
+    c.rateLimits.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 }),
+    c.auditLogs.createIndex({ userId: 1, createdAt: -1 }),
+    c.auditLogs.createIndex({ entity: 1, createdAt: -1 }),
     c.biometrics.createIndex({ userId: 1, timestamp: -1 }),
     c.telemetry.createIndex({ userId: 1, timestamp: -1 }),
     c.nutrition.createIndex({ userId: 1, timestamp: -1 }),

@@ -1,0 +1,3 @@
+import { collections } from "@/db/collections";
+import { ApiError } from "@/lib/api";
+export async function enforceRateLimit(input: { key: string; windowSec: number; max: number }) { const c = await collections(); const now = new Date(); const windowStart = new Date(Date.now() - input.windowSec * 1000); await c.rateLimits.deleteMany({ key: input.key, createdAt: { $lt: windowStart } }); const count = await c.rateLimits.countDocuments({ key: input.key }); if (count >= input.max) throw new ApiError(429, "RATE_LIMITED", "Too many requests"); await c.rateLimits.insertOne({ key: input.key, createdAt: now, updatedAt: now, userId: "system" }); }
