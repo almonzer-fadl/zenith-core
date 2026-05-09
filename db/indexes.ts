@@ -12,6 +12,8 @@ export async function ensureIndexes() {
     c.rateLimits.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 }),
     c.auditLogs.createIndex({ userId: 1, createdAt: -1 }),
     c.auditLogs.createIndex({ entity: 1, createdAt: -1 }),
+    c.monitoringEvents.createIndex({ createdAt: -1 }),
+    c.monitoringEvents.createIndex({ route: 1, method: 1, createdAt: -1 }),
     c.biometrics.createIndex({ userId: 1, timestamp: -1 }),
     c.telemetry.createIndex({ userId: 1, timestamp: -1 }),
     c.nutrition.createIndex({ userId: 1, timestamp: -1 }),

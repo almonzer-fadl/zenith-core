@@ -6,11 +6,13 @@ import { collections } from "@/db/collections";
 import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getRequestId } from "@/lib/observability";
+import { monitorResponse } from "@/lib/route-monitor";
 import bcrypt from "bcryptjs";
 
 const loginSchema = z.object({ email: z.string().email().optional(), password: z.string().min(1), deviceName: z.string().max(120).optional() });
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const requestId = getRequestId(request);
   try {
     const ip = request.headers.get("x-forwarded-for") ?? "local";
@@ -37,9 +39,11 @@ export async function POST(request: Request) {
     const refreshToken = await issueRefreshToken(userId, { userAgent: request.headers.get("user-agent"), ip, deviceName: body.deviceName ?? null });
 
     await auditLog({ userId, action: "auth.login", entity: "session", requestId, ip, userAgent: request.headers.get("user-agent") });
-
-    return ok({ accessToken, refreshToken, tokenType: "Bearer", userId, email: user.email, role: user.role }, 200, requestId);
+    const response = ok({ accessToken, refreshToken, tokenType: "Bearer", userId, email: user.email, role: user.role }, 200, requestId);
+    await monitorResponse({ startedAt, route: "/api/v1/auth/login", method: "POST", requestId, status: 200, userId });
+    return response;
   } catch (error) {
+    await monitorResponse({ startedAt, route: "/api/v1/auth/login", method: "POST", requestId, status: 500 });
     return handleApiError(error, requestId);
   }
 }

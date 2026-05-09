@@ -10,7 +10,9 @@
     "db:indexes": "tsx scripts/create-indexes.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed-owner": "tsx scripts/seed-owner.ts",
-    "test:integration": "tsx tests/integration/smoke.ts"
+    "test:integration": "tsx tests/integration/smoke.ts",
+    "test": "tsx tests/run-all.ts",
+    "monitor:alerts": "tsx scripts/monitor-alerts.ts"
   },
   "dependencies": {
     "@types/web-push": "^3.6.4",
