@@ -47,4 +47,12 @@ if (!healthUpdateSource.includes("expectedUpdatedAt")) {
   throw new Error("Conflict contract check failed for health update route");
 }
 
+const reportsSource = readFileSync("app/api/v1/reports/route.ts", "utf8");
+const requiredReportFields = ["metrics", "comparisons", "insights", "drivers", "windowDays"];
+for (const field of requiredReportFields) {
+  if (!reportsSource.includes(field)) {
+    throw new Error(`Reports contract check failed: missing ${field}`);
+  }
+}
+
 console.log("Integration contract checks passed");

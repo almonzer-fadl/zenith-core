@@ -2,22 +2,277 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Zenith Core API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "servers": [
     {
       "url": "http://localhost:3000"
     }
   ],
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALIDATION_ERROR",
+                  "AUTH_ERROR",
+                  "CONFLICT_ERROR",
+                  "DUPLICATE_ERROR",
+                  "RATE_LIMIT_ERROR",
+                  "DOWNSTREAM_ERROR",
+                  "SERVER_ERROR"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "ok",
+          "error"
+        ]
+      },
+      "SyncStatus": {
+        "type": "object",
+        "properties": {
+          "lastSuccessAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "pendingCount": {
+            "type": "integer"
+          },
+          "failedCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lastSuccessAt",
+          "pendingCount",
+          "failedCount"
+        ]
+      },
+      "Profile": {
+        "type": "object",
+        "properties": {
+          "dob": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "heightCm": {
+            "type": "number"
+          },
+          "targetCarbs": {
+            "type": "number"
+          },
+          "targetProtein": {
+            "type": "number"
+          },
+          "targetFat": {
+            "type": "number"
+          },
+          "targetCalories": {
+            "type": "number"
+          },
+          "glucoseLow": {
+            "type": "number"
+          },
+          "glucoseHigh": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "heightCm",
+          "targetCarbs",
+          "targetProtein",
+          "targetFat",
+          "targetCalories",
+          "glucoseLow",
+          "glucoseHigh"
+        ]
+      },
+      "ReminderRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string",
+            "enum": [
+              "insulin",
+              "glucose",
+              "meals",
+              "sleep",
+              "workout"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "high"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "enabled",
+          "times",
+          "severity"
+        ]
+      },
+      "ReminderEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "done",
+              "missed",
+              "snooze"
+            ]
+          },
+          "scheduledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "actedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "action",
+          "actedAt"
+        ]
+      },
+      "ReportsMetrics": {
+        "type": "object",
+        "properties": {
+          "tir": {
+            "type": "number"
+          },
+          "glucoseAverage": {
+            "type": "number"
+          },
+          "glucoseVariabilitySd": {
+            "type": "number"
+          },
+          "glucoseVariabilityCv": {
+            "type": "number"
+          },
+          "hypoCount": {
+            "type": "integer"
+          },
+          "hyperCount": {
+            "type": "integer"
+          },
+          "adherenceRate": {
+            "type": "number"
+          },
+          "adherenceDone": {
+            "type": "integer"
+          },
+          "adherenceMissed": {
+            "type": "integer"
+          },
+          "adherenceSnoozed": {
+            "type": "integer"
+          },
+          "sleepAverageHours": {
+            "type": "number"
+          },
+          "sleepConsistency": {
+            "type": "number"
+          },
+          "trainingLoadKm": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tir",
+          "glucoseAverage",
+          "glucoseVariabilitySd",
+          "glucoseVariabilityCv",
+          "hypoCount",
+          "hyperCount",
+          "adherenceRate",
+          "adherenceDone",
+          "adherenceMissed",
+          "adherenceSnoozed",
+          "sleepAverageHours",
+          "sleepConsistency",
+          "trainingLoadKm"
+        ]
+      }
+    }
+  },
   "paths": {
     "/api/v1/auth/login": {
       "post": {
         "summary": "Login"
-      }
-    },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "summary": "Refresh token"
       }
     },
     "/api/v1/auth/logout": {
@@ -30,33 +285,24 @@
         "summary": "Current user"
       }
     },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "Refresh token"
+      }
+    },
     "/api/v1/sessions": {
       "get": {
         "summary": "List sessions"
       }
     },
-    "/api/v1/health": {
-      "get": {
-        "summary": "List health logs"
-      },
-      "post": {
-        "summary": "Create health log"
+    "/api/v1/sessions/{id}": {
+      "delete": {
+        "summary": "Revoke session"
       }
     },
-    "/api/v1/athletic": {
+    "/api/v1/dashboard": {
       "get": {
-        "summary": "List athletic logs"
-      },
-      "post": {
-        "summary": "Create athletic log"
-      }
-    },
-    "/api/v1/money": {
-      "get": {
-        "summary": "List money entries"
-      },
-      "post": {
-        "summary": "Create money entry"
+        "summary": "Dashboard snapshot"
       }
     },
     "/api/v1/biometrics": {
@@ -67,12 +313,34 @@
         "summary": "Create biometric"
       }
     },
+    "/api/v1/biometrics/{id}": {
+      "patch": {
+        "summary": "Update biometric"
+      },
+      "delete": {
+        "summary": "Delete biometric"
+      },
+      "get": {
+        "summary": "Get biometrics entry"
+      }
+    },
     "/api/v1/telemetry": {
       "get": {
         "summary": "List telemetry"
       },
       "post": {
         "summary": "Create telemetry"
+      }
+    },
+    "/api/v1/telemetry/{id}": {
+      "patch": {
+        "summary": "Update telemetry"
+      },
+      "delete": {
+        "summary": "Delete telemetry"
+      },
+      "get": {
+        "summary": "Get telemetry entry"
       }
     },
     "/api/v1/nutrition": {
@@ -83,12 +351,34 @@
         "summary": "Create nutrition"
       }
     },
+    "/api/v1/nutrition/{id}": {
+      "patch": {
+        "summary": "Update nutrition"
+      },
+      "delete": {
+        "summary": "Delete nutrition"
+      },
+      "get": {
+        "summary": "Get nutrition entry"
+      }
+    },
     "/api/v1/sleep": {
       "get": {
         "summary": "List sleep logs"
       },
       "post": {
         "summary": "Create sleep log"
+      }
+    },
+    "/api/v1/sleep/{id}": {
+      "patch": {
+        "summary": "Update sleep log"
+      },
+      "delete": {
+        "summary": "Delete sleep log"
+      },
+      "get": {
+        "summary": "Get sleep entry"
       }
     },
     "/api/v1/spiritual": {
@@ -101,33 +391,84 @@
     },
     "/api/v1/memorization": {
       "get": {
-        "summary": "List memorization"
+        "summary": "List memorization entries"
       },
       "post": {
         "summary": "Create memorization entry"
       }
     },
-    "/api/v1/dashboard": {
+    "/api/v1/health": {
       "get": {
-        "summary": "Dashboard snapshot"
+        "summary": "List health logs"
+      },
+      "post": {
+        "summary": "Create health log"
+      }
+    },
+    "/api/v1/health/{id}": {
+      "patch": {
+        "summary": "Update health log"
+      },
+      "delete": {
+        "summary": "Delete health log"
+      },
+      "get": {
+        "summary": "Get health entry"
+      }
+    },
+    "/api/v1/athletic": {
+      "get": {
+        "summary": "List athletic logs"
+      },
+      "post": {
+        "summary": "Create athletic log"
+      }
+    },
+    "/api/v1/athletic/{id}": {
+      "patch": {
+        "summary": "Update athletic log"
+      },
+      "delete": {
+        "summary": "Delete athletic log"
+      },
+      "get": {
+        "summary": "Get athletic entry"
+      }
+    },
+    "/api/v1/money": {
+      "get": {
+        "summary": "List money entries"
+      },
+      "post": {
+        "summary": "Create money entry"
+      }
+    },
+    "/api/v1/money/{id}": {
+      "patch": {
+        "summary": "Update money entry"
+      },
+      "delete": {
+        "summary": "Delete money entry"
+      },
+      "get": {
+        "summary": "Get money entry"
       }
     },
     "/api/v1/reports": {
       "get": {
-        "summary": "Reports data"
-      }
-    },
-    "/api/v1/push": {
-      "post": {
-        "summary": "Save push subscription"
-      },
-      "delete": {
-        "summary": "Delete push subscription"
-      }
-    },
-    "/api/v1/notifications/trigger": {
-      "post": {
-        "summary": "Trigger push notification"
+        "summary": "Reports data",
+        "parameters": [
+          {
+            "name": "windowDays",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 7,
+              "maximum": 90
+            },
+            "required": false
+          }
+        ]
       }
     },
     "/api/v1/reminders/rules": {
@@ -168,6 +509,54 @@
       },
       "put": {
         "summary": "Update profile settings"
+      }
+    },
+    "/api/v1/sync/status": {
+      "get": {
+        "summary": "Get sync status",
+        "responses": {
+          "200": {
+            "description": "Sync status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SyncStatus"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push": {
+      "post": {
+        "summary": "Save push subscription"
+      },
+      "delete": {
+        "summary": "Delete push subscription"
+      }
+    },
+    "/api/v1/notifications/trigger": {
+      "post": {
+        "summary": "Trigger push notification"
+      }
+    },
+    "/api/v1/monitoring/summary": {
+      "get": {
+        "summary": "Monitoring summary"
       }
     }
   }

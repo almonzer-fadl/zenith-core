@@ -2,6 +2,8 @@ import { z } from "zod";
 import { collections } from "@/db/collections";
 import { handleApiError, ok } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
+import { getRequestId } from "@/lib/observability";
+import { auditLog } from "@/lib/audit";
 
 const profileSchema = z.object({
   dob: z.coerce.date().nullable().optional(),
@@ -29,17 +31,19 @@ function defaultProfile(userId: string) {
 }
 
 export async function GET(request: Request) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const c = await collections();
     const item = await c.profiles.findOne({ userId });
-    return ok(item ?? defaultProfile(userId));
+    return ok(item ?? defaultProfile(userId), 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }
 
 export async function PUT(request: Request) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const body = profileSchema.parse(await request.json());
@@ -61,8 +65,19 @@ export async function PUT(request: Request) {
       { upsert: true, returnDocument: "after" }
     );
 
-    return ok(result);
+    await auditLog({
+      userId,
+      action: "profile.update",
+      entity: "profiles",
+      entityId: result?._id?.toString() ?? null,
+      requestId,
+      ip: request.headers.get("x-forwarded-for"),
+      userAgent: request.headers.get("user-agent"),
+      meta: { fields: Object.keys(body) },
+    });
+
+    return ok(result, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }
