@@ -4,6 +4,8 @@ import { handleApiError, ok, ApiError } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
 import { assertObjectId } from "@/app/api/v1/health/route";
 import { assertNoUpdateConflict } from "@/lib/conflict";
+import { getRequestId } from "@/lib/observability";
+import { auditLog } from "@/lib/audit";
 
 const updateAthleticSchema = z.object({
   expectedUpdatedAt: z.string().optional(),
@@ -17,6 +19,7 @@ const updateAthleticSchema = z.object({
 });
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const { id } = await params;
@@ -25,13 +28,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const item = await c.athleticLogs.findOne({ _id: assertObjectId(id), userId });
     if (!item) throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
 
-    return ok(item);
+    return ok(item, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const body = updateAthleticSchema.parse(await request.json());
@@ -58,13 +62,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
 
     if (!result) throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
-    return ok(result);
+
+    await auditLog({
+      userId,
+      action: "athletic.update",
+      entity: "athletic_logs",
+      entityId: id,
+      requestId,
+      ip: request.headers.get("x-forwarded-for"),
+      userAgent: request.headers.get("user-agent"),
+      meta: { fields: Object.keys(updateDoc) },
+    });
+
+    return ok(result, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const { id } = await params;
@@ -76,8 +93,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
     }
 
-    return ok({ deleted: true });
+    await auditLog({
+      userId,
+      action: "athletic.delete",
+      entity: "athletic_logs",
+      entityId: id,
+      requestId,
+      ip: request.headers.get("x-forwarded-for"),
+      userAgent: request.headers.get("user-agent"),
+    });
+
+    return ok({ deleted: true }, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }

@@ -6,7 +6,7 @@ This checklist is the source of truth for backend/iOS contract alignment.
 ## Envelope
 - Success envelope: `{"ok": true, "data": ...}`
 - Error envelope: `{"ok": false, "error": {"code","message","details?"}}`
-- Error code set: `VALIDATION_ERROR`, `AUTH_ERROR`, `CONFLICT_ERROR`, `DUPLICATE_ERROR`, `RATE_LIMIT_ERROR`, `DOWNSTREAM_ERROR`, `SERVER_ERROR`
+- Error code set (core + domain): `VALIDATION_ERROR`, `AUTH_ERROR`, `CONFLICT_ERROR`, `DUPLICATE_ERROR`, `RATE_LIMIT_ERROR`, `DOWNSTREAM_ERROR`, `SERVER_ERROR`, `NOT_FOUND`, `INVALID_CREDENTIALS`, `INVALID_ID`, `MISSING_VAPID`, `NOT_SUBSCRIBED`
 
 ## Date/Time and Numeric Rules
 - Storage: UTC timestamps.

@@ -72,6 +72,8 @@ const sensitiveAuditRoutes = [
   "app/api/v1/push/route.ts",
   "app/api/v1/notifications/trigger/route.ts",
   "app/api/v1/auth/logout/route.ts",
+  "app/api/v1/sessions/[id]/route.ts",
+  "app/api/v1/athletic/[id]/route.ts",
 ];
 
 for (const routePath of sensitiveAuditRoutes) {

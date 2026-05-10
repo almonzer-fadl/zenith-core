@@ -1,12 +1,14 @@
 import { collections } from "@/db/collections";
 import { handleApiError, ok } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
+import { getRequestId } from "@/lib/observability";
 
 export async function GET(request: Request) {
+  const requestId = getRequestId(request);
   try {
     const userId = await requireBearerUserId(request);
     const c = await collections();
-    const since = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const events = await c.reminderEvents.find({ userId, actedAt: { $gte: since } }).toArray();
 
     const total = events.length;
@@ -36,8 +38,8 @@ export async function GET(request: Request) {
       snoozed,
       adherenceRate,
       byDomain,
-    });
+    }, 200, requestId);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, requestId);
   }
 }

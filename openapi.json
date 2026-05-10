@@ -30,7 +30,12 @@
                   "DUPLICATE_ERROR",
                   "RATE_LIMIT_ERROR",
                   "DOWNSTREAM_ERROR",
-                  "SERVER_ERROR"
+                  "SERVER_ERROR",
+                  "NOT_FOUND",
+                  "INVALID_CREDENTIALS",
+                  "INVALID_ID",
+                  "MISSING_VAPID",
+                  "NOT_SUBSCRIBED"
                 ]
               },
               "message": {
