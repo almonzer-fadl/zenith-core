@@ -1,6 +1,7 @@
 import "./unit-crypto";
 import "./unit-dto";
 import "./unit-analytics";
+import "./unit-conflict";
 import "./integration/smoke";
 import "./integration/contracts";
 import "./integration/openapi-parity";

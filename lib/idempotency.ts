@@ -6,7 +6,7 @@ function payloadHash(payload: unknown) {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
-export async function resolveIdempotentCreate<T extends { id: string }>(args: {
+export async function resolveIdempotentCreate<T extends Record<string, unknown>>(args: {
   userId: string;
   request: Request;
   route: string;

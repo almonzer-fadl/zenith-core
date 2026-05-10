@@ -47,6 +47,40 @@ if (!healthUpdateSource.includes("expectedUpdatedAt")) {
   throw new Error("Conflict contract check failed for health update route");
 }
 
+const reliabilityRoutes = [
+  "app/api/v1/biometrics/[id]/route.ts",
+  "app/api/v1/telemetry/[id]/route.ts",
+  "app/api/v1/nutrition/[id]/route.ts",
+  "app/api/v1/sleep/[id]/route.ts",
+  "app/api/v1/reminders/rules/[id]/route.ts",
+];
+
+for (const routePath of reliabilityRoutes) {
+  const source = readFileSync(routePath, "utf8");
+  if (!source.includes("expectedUpdatedAt")) {
+    throw new Error(`Reliability contract check failed: missing expectedUpdatedAt in ${routePath}`);
+  }
+  if (!source.includes("auditLog(")) {
+    throw new Error(`Reliability contract check failed: missing auditLog usage in ${routePath}`);
+  }
+}
+
+const sensitiveAuditRoutes = [
+  "app/api/v1/profile/route.ts",
+  "app/api/v1/reminders/rules/route.ts",
+  "app/api/v1/reminders/events/route.ts",
+  "app/api/v1/push/route.ts",
+  "app/api/v1/notifications/trigger/route.ts",
+  "app/api/v1/auth/logout/route.ts",
+];
+
+for (const routePath of sensitiveAuditRoutes) {
+  const source = readFileSync(routePath, "utf8");
+  if (!source.includes("auditLog(")) {
+    throw new Error(`Audit coverage check failed: missing auditLog usage in ${routePath}`);
+  }
+}
+
 const reportsSource = readFileSync("app/api/v1/reports/route.ts", "utf8");
 const requiredReportFields = ["metrics", "comparisons", "insights", "drivers", "windowDays"];
 for (const field of requiredReportFields) {
