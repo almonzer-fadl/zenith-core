@@ -7,6 +7,7 @@ export interface SessionDoc extends BaseDoc { refreshTokenHash: string; deviceNa
 export interface RateLimitDoc extends BaseDoc { key: string; }
 export interface AuditLogDoc extends BaseDoc { action: string; entity: string; entityId: string | null; requestId: string; ip: string | null; userAgent: string | null; meta: Record<string, unknown>; }
 export interface MonitoringEventDoc extends BaseDoc { route: string; method: string; status: number; durationMs: number; requestId: string; }
+export interface IdempotencyKeyDoc extends BaseDoc { route: string; key: string; payloadHash: string; response: Record<string, unknown> | null; }
 
 export interface BiometricsDoc extends BaseDoc { timestamp: Date; bgLevel: string; insulinUnits: string | null; carbs: number | null; rpe: number | null; notes?: string | null; }
 export interface TelemetryDoc extends BaseDoc { timestamp: Date; type: string; distanceKm: string; paceSeconds: number | null; elevationGainM: number | null; avgHr: number | null; rpe: number | null; splits?: string | null; notes?: string | null; }
@@ -28,6 +29,7 @@ export async function collections() {
     rateLimits: db.collection<RateLimitDoc>("rate_limits"),
     auditLogs: db.collection<AuditLogDoc>("audit_logs"),
     monitoringEvents: db.collection<MonitoringEventDoc>("monitoring_events"),
+    idempotencyKeys: db.collection<IdempotencyKeyDoc>("idempotency_keys"),
     biometrics: db.collection<BiometricsDoc>("biometrics"),
     telemetry: db.collection<TelemetryDoc>("telemetry"),
     nutrition: db.collection<NutritionDoc>("nutrition"),
