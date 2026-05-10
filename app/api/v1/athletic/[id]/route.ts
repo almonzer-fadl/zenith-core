@@ -3,8 +3,10 @@ import { collections } from "@/db/collections";
 import { handleApiError, ok, ApiError } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
 import { assertObjectId } from "@/app/api/v1/health/route";
+import { assertNoUpdateConflict } from "@/lib/conflict";
 
 const updateAthleticSchema = z.object({
+  expectedUpdatedAt: z.string().optional(),
   loggedAt: z.coerce.date().optional(),
   activityType: z.enum(["run", "walk", "cycle", "swim", "gym", "other"]).optional(),
   durationMin: z.number().int().min(1).max(3000).optional(),
@@ -36,9 +38,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
 
     const c = await collections();
+    const current = await c.athleticLogs.findOne({ _id: assertObjectId(id), userId });
+    if (!current) throw new ApiError(404, "NOT_FOUND", "Athletic log not found");
+
+    assertNoUpdateConflict({
+      expectedUpdatedAt: body.expectedUpdatedAt,
+      currentUpdatedAt: current.updatedAt,
+      entity: "athletic_logs",
+      id,
+    });
+
+    const updateDoc = { ...body } as Record<string, unknown>;
+    delete updateDoc.expectedUpdatedAt;
+
     const result = await c.athleticLogs.findOneAndUpdate(
       { _id: assertObjectId(id), userId },
-      { $set: { ...body, updatedAt: new Date() } },
+      { $set: { ...updateDoc, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
 

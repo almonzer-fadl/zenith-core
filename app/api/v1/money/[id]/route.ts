@@ -7,9 +7,81 @@ import { decryptText, encryptText } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { auditLog } from "@/lib/audit";
 import { getRequestId } from "@/lib/observability";
+import { assertNoUpdateConflict } from "@/lib/conflict";
 
-const updateMoneySchema = z.object({ loggedAt: z.coerce.date().optional(), type: z.enum(["income", "expense", "transfer"]).optional(), amount: z.number().positive().optional(), currency: z.string().length(3).transform((s) => s.toUpperCase()).optional(), category: z.string().min(1).max(120).optional(), account: z.string().max(120).nullable().optional(), note: z.string().max(2000).nullable().optional() });
+const updateMoneySchema = z.object({
+  expectedUpdatedAt: z.string().optional(),
+  loggedAt: z.coerce.date().optional(),
+  type: z.enum(["income", "expense", "transfer"]).optional(),
+  amount: z.number().positive().optional(),
+  currency: z.string().length(3).transform((s) => s.toUpperCase()).optional(),
+  category: z.string().min(1).max(120).optional(),
+  account: z.string().max(120).nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const { id } = await params; const c = await collections(); const item = await c.moneyEntries.findOne({ _id: assertObjectId(id), userId }); if (!item) throw new ApiError(404, "NOT_FOUND", "Money entry not found"); return ok({ ...item, note: item.note ? decryptText(item.note, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const body = updateMoneySchema.parse(await request.json()); const { id } = await params; const patch: Record<string, unknown> = { updatedAt: new Date() }; if (body.loggedAt) patch.loggedAt = body.loggedAt; if (body.type !== undefined) patch.type = body.type; if (body.amount !== undefined) patch.amount = body.amount; if (body.currency !== undefined) patch.currency = body.currency; if (body.category !== undefined) patch.category = body.category; if (body.account !== undefined) patch.account = body.account ?? null; if (body.note !== undefined) patch.note = body.note == null ? null : encryptText(body.note, env.FIELD_ENCRYPTION_SECRET); const c = await collections(); const item = await c.moneyEntries.findOneAndUpdate({ _id: assertObjectId(id), userId }, { $set: patch }, { returnDocument: "after" }); if (!item) throw new ApiError(404, "NOT_FOUND", "Money entry not found"); await auditLog({ userId, action: "money.update", entity: "money_entries", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") }); return ok({ ...item, note: item.note ? decryptText(item.note, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) { const requestId = getRequestId(request); try { const userId = await requireBearerUserId(request); const { id } = await params; const c = await collections(); const result = await c.moneyEntries.deleteOne({ _id: assertObjectId(id), userId }); if (result.deletedCount !== 1) throw new ApiError(404, "NOT_FOUND", "Money entry not found"); await auditLog({ userId, action: "money.delete", entity: "money_entries", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") }); return ok({ deleted: true }, 200, requestId);} catch (error) { return handleApiError(error, requestId);} }
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
+  try {
+    const userId = await requireBearerUserId(request);
+    const { id } = await params;
+    const c = await collections();
+    const item = await c.moneyEntries.findOne({ _id: assertObjectId(id), userId });
+    if (!item) throw new ApiError(404, "NOT_FOUND", "Money entry not found");
+    return ok({ ...item, note: item.note ? decryptText(item.note, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);
+  } catch (error) {
+    return handleApiError(error, requestId);
+  }
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
+  try {
+    const userId = await requireBearerUserId(request);
+    const body = updateMoneySchema.parse(await request.json());
+    const { id } = await params;
+
+    const c = await collections();
+    const current = await c.moneyEntries.findOne({ _id: assertObjectId(id), userId });
+    if (!current) throw new ApiError(404, "NOT_FOUND", "Money entry not found");
+
+    assertNoUpdateConflict({
+      expectedUpdatedAt: body.expectedUpdatedAt,
+      currentUpdatedAt: current.updatedAt,
+      entity: "money_entries",
+      id,
+    });
+
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.loggedAt) patch.loggedAt = body.loggedAt;
+    if (body.type !== undefined) patch.type = body.type;
+    if (body.amount !== undefined) patch.amount = body.amount;
+    if (body.currency !== undefined) patch.currency = body.currency;
+    if (body.category !== undefined) patch.category = body.category;
+    if (body.account !== undefined) patch.account = body.account ?? null;
+    if (body.note !== undefined) patch.note = body.note == null ? null : encryptText(body.note, env.FIELD_ENCRYPTION_SECRET);
+
+    const item = await c.moneyEntries.findOneAndUpdate({ _id: assertObjectId(id), userId }, { $set: patch }, { returnDocument: "after" });
+    if (!item) throw new ApiError(404, "NOT_FOUND", "Money entry not found");
+
+    await auditLog({ userId, action: "money.update", entity: "money_entries", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") });
+    return ok({ ...item, note: item.note ? decryptText(item.note, env.FIELD_ENCRYPTION_SECRET) : null }, 200, requestId);
+  } catch (error) {
+    return handleApiError(error, requestId);
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const requestId = getRequestId(request);
+  try {
+    const userId = await requireBearerUserId(request);
+    const { id } = await params;
+    const c = await collections();
+    const result = await c.moneyEntries.deleteOne({ _id: assertObjectId(id), userId });
+    if (result.deletedCount !== 1) throw new ApiError(404, "NOT_FOUND", "Money entry not found");
+    await auditLog({ userId, action: "money.delete", entity: "money_entries", entityId: id, requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") });
+    return ok({ deleted: true }, 200, requestId);
+  } catch (error) {
+    return handleApiError(error, requestId);
+  }
+}

@@ -1,25 +1,174 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "Zenith Core API", "version": "1.0.0" },
-  "servers": [{ "url": "http://localhost:3000" }],
+  "info": {
+    "title": "Zenith Core API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
   "paths": {
-    "/api/v1/auth/login": { "post": { "summary": "Login" } },
-    "/api/v1/auth/refresh": { "post": { "summary": "Refresh token" } },
-    "/api/v1/auth/logout": { "post": { "summary": "Logout" } },
-    "/api/v1/auth/me": { "get": { "summary": "Current user" } },
-    "/api/v1/sessions": { "get": { "summary": "List sessions" } },
-    "/api/v1/health": { "get": { "summary": "List health logs" }, "post": { "summary": "Create health log" } },
-    "/api/v1/athletic": { "get": { "summary": "List athletic logs" }, "post": { "summary": "Create athletic log" } },
-    "/api/v1/money": { "get": { "summary": "List money entries" }, "post": { "summary": "Create money entry" } },
-    "/api/v1/biometrics": { "get": { "summary": "List biometrics" }, "post": { "summary": "Create biometric" } },
-    "/api/v1/telemetry": { "get": { "summary": "List telemetry" }, "post": { "summary": "Create telemetry" } },
-    "/api/v1/nutrition": { "get": { "summary": "List nutrition" }, "post": { "summary": "Create nutrition" } },
-    "/api/v1/sleep": { "get": { "summary": "List sleep logs" }, "post": { "summary": "Create sleep log" } },
-    "/api/v1/spiritual": { "get": { "summary": "List spiritual logs" }, "post": { "summary": "Create spiritual log" } },
-    "/api/v1/memorization": { "get": { "summary": "List memorization" }, "post": { "summary": "Create memorization entry" } },
-    "/api/v1/dashboard": { "get": { "summary": "Dashboard snapshot" } },
-    "/api/v1/reports": { "get": { "summary": "Reports data" } },
-    "/api/v1/push": { "post": { "summary": "Save push subscription" }, "delete": { "summary": "Delete push subscription" } },
-    "/api/v1/notifications/trigger": { "post": { "summary": "Trigger push notification" } }
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Login"
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "Refresh token"
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Logout"
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Current user"
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "summary": "List sessions"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "List health logs"
+      },
+      "post": {
+        "summary": "Create health log"
+      }
+    },
+    "/api/v1/athletic": {
+      "get": {
+        "summary": "List athletic logs"
+      },
+      "post": {
+        "summary": "Create athletic log"
+      }
+    },
+    "/api/v1/money": {
+      "get": {
+        "summary": "List money entries"
+      },
+      "post": {
+        "summary": "Create money entry"
+      }
+    },
+    "/api/v1/biometrics": {
+      "get": {
+        "summary": "List biometrics"
+      },
+      "post": {
+        "summary": "Create biometric"
+      }
+    },
+    "/api/v1/telemetry": {
+      "get": {
+        "summary": "List telemetry"
+      },
+      "post": {
+        "summary": "Create telemetry"
+      }
+    },
+    "/api/v1/nutrition": {
+      "get": {
+        "summary": "List nutrition"
+      },
+      "post": {
+        "summary": "Create nutrition"
+      }
+    },
+    "/api/v1/sleep": {
+      "get": {
+        "summary": "List sleep logs"
+      },
+      "post": {
+        "summary": "Create sleep log"
+      }
+    },
+    "/api/v1/spiritual": {
+      "get": {
+        "summary": "List spiritual logs"
+      },
+      "post": {
+        "summary": "Create spiritual log"
+      }
+    },
+    "/api/v1/memorization": {
+      "get": {
+        "summary": "List memorization"
+      },
+      "post": {
+        "summary": "Create memorization entry"
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "summary": "Dashboard snapshot"
+      }
+    },
+    "/api/v1/reports": {
+      "get": {
+        "summary": "Reports data"
+      }
+    },
+    "/api/v1/push": {
+      "post": {
+        "summary": "Save push subscription"
+      },
+      "delete": {
+        "summary": "Delete push subscription"
+      }
+    },
+    "/api/v1/notifications/trigger": {
+      "post": {
+        "summary": "Trigger push notification"
+      }
+    },
+    "/api/v1/reminders/rules": {
+      "get": {
+        "summary": "List reminder rules"
+      },
+      "post": {
+        "summary": "Upsert reminder rule"
+      }
+    },
+    "/api/v1/reminders/rules/{id}": {
+      "get": {
+        "summary": "Get reminder rule"
+      },
+      "patch": {
+        "summary": "Update reminder rule"
+      },
+      "delete": {
+        "summary": "Delete reminder rule"
+      }
+    },
+    "/api/v1/reminders/events": {
+      "get": {
+        "summary": "List reminder events"
+      },
+      "post": {
+        "summary": "Create reminder event action"
+      }
+    },
+    "/api/v1/reminders/adherence": {
+      "get": {
+        "summary": "Reminder adherence summary"
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "summary": "Get profile settings"
+      },
+      "put": {
+        "summary": "Update profile settings"
+      }
+    }
   }
 }

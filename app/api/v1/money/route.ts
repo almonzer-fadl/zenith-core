@@ -7,6 +7,7 @@ import { decryptText, encryptText } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { auditLog } from "@/lib/audit";
 import { getRequestId } from "@/lib/observability";
+import { resolveIdempotentCreate } from "@/lib/idempotency";
 
 const createMoneySchema = z.object({ loggedAt: z.coerce.date().optional(), type: z.enum(["income", "expense", "transfer"]), amount: z.number().positive(), currency: z.string().length(3).transform((s) => s.toUpperCase()), category: z.string().min(1).max(120), account: z.string().max(120).nullable().optional(), note: z.string().max(2000).nullable().optional() });
 
@@ -40,26 +41,37 @@ export async function POST(request: Request) {
   try {
     const userId = await requireBearerUserId(request);
     const body = createMoneySchema.parse(await request.json());
-    const now = new Date();
 
-    const doc = {
+    const response = await resolveIdempotentCreate({
       userId,
-      loggedAt: body.loggedAt ?? now,
-      type: body.type,
-      amount: body.amount,
-      currency: body.currency,
-      category: body.category,
-      account: body.account ?? null,
-      note: body.note ? encryptText(body.note, env.FIELD_ENCRYPTION_SECRET) : null,
-      createdAt: now,
-      updatedAt: now,
-    };
+      request,
+      route: "v1/money.create",
+      payload: body,
+      create: async () => {
+        const now = new Date();
 
-    const c = await collections();
-    const result = await c.moneyEntries.insertOne(doc);
-    await auditLog({ userId, action: "money.create", entity: "money_entries", entityId: result.insertedId.toString(), requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") });
+        const doc = {
+          userId,
+          loggedAt: body.loggedAt ?? now,
+          type: body.type,
+          amount: body.amount,
+          currency: body.currency,
+          category: body.category,
+          account: body.account ?? null,
+          note: body.note ? encryptText(body.note, env.FIELD_ENCRYPTION_SECRET) : null,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-    return ok({ id: result.insertedId.toString(), ...doc, note: body.note ?? null }, 201, requestId);
+        const c = await collections();
+        const result = await c.moneyEntries.insertOne(doc);
+        await auditLog({ userId, action: "money.create", entity: "money_entries", entityId: result.insertedId.toString(), requestId, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent") });
+
+        return { id: result.insertedId.toString(), ...doc, note: body.note ?? null };
+      },
+    });
+
+    return ok(response, 201, requestId);
   } catch (error) {
     return handleApiError(error, requestId);
   }

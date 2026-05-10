@@ -3,6 +3,7 @@ import { collections } from "@/db/collections";
 import { handleApiError, ok } from "@/lib/api";
 import { requireBearerUserId } from "@/lib/auth";
 import { buildDateRangeFilter, parseListQuery } from "@/lib/query";
+import { resolveIdempotentCreate } from "@/lib/idempotency";
 
 const createAthleticSchema = z.object({
   loggedAt: z.coerce.date().optional(),
@@ -39,25 +40,34 @@ export async function POST(request: Request) {
   try {
     const userId = await requireBearerUserId(request);
     const body = createAthleticSchema.parse(await request.json());
-    const now = new Date();
 
-    const doc = {
+    const response = await resolveIdempotentCreate({
       userId,
-      loggedAt: body.loggedAt ?? now,
-      activityType: body.activityType,
-      durationMin: body.durationMin,
-      distanceKm: body.distanceKm ?? null,
-      avgHr: body.avgHr ?? null,
-      rpe: body.rpe ?? null,
-      notes: body.notes ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
+      request,
+      route: "v1/athletic.create",
+      payload: body,
+      create: async () => {
+        const now = new Date();
+        const doc = {
+          userId,
+          loggedAt: body.loggedAt ?? now,
+          activityType: body.activityType,
+          durationMin: body.durationMin,
+          distanceKm: body.distanceKm ?? null,
+          avgHr: body.avgHr ?? null,
+          rpe: body.rpe ?? null,
+          notes: body.notes ?? null,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-    const c = await collections();
-    const result = await c.athleticLogs.insertOne(doc);
+        const c = await collections();
+        const result = await c.athleticLogs.insertOne(doc);
+        return { id: result.insertedId.toString(), ...doc };
+      },
+    });
 
-    return ok({ id: result.insertedId.toString(), ...doc }, 201);
+    return ok(response, 201);
   } catch (error) {
     return handleApiError(error);
   }
