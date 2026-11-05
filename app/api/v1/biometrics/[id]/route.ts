@@ -16,6 +16,9 @@ const schema = z.object({
   insulinUnits: z.union([z.string(), z.number()]).nullable().optional(),
   carbs: z.union([z.string(), z.number()]).nullable().optional(),
   rpe: z.union([z.string(), z.number()]).nullable().optional(),
+  context: z.enum(["fasting", "pre_meal", "post_meal", "pre_workout", "post_workout", "bedtime", "other"]).optional(),
+  source: z.enum(["manual", "healthkit", "import"]).optional(),
+  tags: z.array(z.string().min(1).max(30)).max(8).optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -51,6 +54,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (body.insulinUnits !== undefined) patch.insulinUnits = body.insulinUnits == null ? null : String(body.insulinUnits);
     if (body.carbs !== undefined) patch.carbs = body.carbs == null ? null : Number(body.carbs);
     if (body.rpe !== undefined) patch.rpe = body.rpe == null ? null : Number(body.rpe);
+    if (body.context !== undefined) patch.context = body.context;
+    if (body.source !== undefined) patch.source = body.source;
+    if (body.tags !== undefined) patch.tags = body.tags;
     if (body.notes !== undefined) patch.notes = body.notes == null ? null : encryptText(body.notes, env.FIELD_ENCRYPTION_SECRET);
 
     const item = await c.biometrics.findOneAndUpdate({ _id: toObjectId(id), userId }, { $set: patch }, { returnDocument: "after" });

@@ -8,11 +8,11 @@ export interface RateLimitDoc extends BaseDoc { key: string; }
 export interface AuditLogDoc extends BaseDoc { action: string; entity: string; entityId: string | null; requestId: string; ip: string | null; userAgent: string | null; meta: Record<string, unknown>; }
 export interface MonitoringEventDoc extends BaseDoc { route: string; method: string; status: number; durationMs: number; requestId: string; }
 export interface IdempotencyKeyDoc extends BaseDoc { route: string; key: string; payloadHash: string; response: Record<string, unknown> | null; }
-export interface ReminderRuleDoc extends BaseDoc { domain: "insulin" | "glucose" | "meals" | "sleep" | "workout"; enabled: boolean; times: string[]; severity: "normal" | "high"; }
+export interface ReminderRuleDoc extends BaseDoc { domain: "insulin" | "glucose" | "meals" | "sleep" | "workout"; enabled: boolean; times: string[]; severity: "normal" | "high"; doseHint?: string | null; }
 export interface ReminderEventDoc extends BaseDoc { ruleId: string | null; domain: "insulin" | "glucose" | "meals" | "sleep" | "workout"; action: "done" | "missed" | "snooze"; scheduledAt: Date | null; actedAt: Date; note?: string | null; }
 export interface ProfileDoc extends BaseDoc { dob: Date | null; heightCm: number; targetCarbs: number; targetProtein: number; targetFat: number; targetCalories: number; glucoseLow: number; glucoseHigh: number; }
 
-export interface BiometricsDoc extends BaseDoc { timestamp: Date; bgLevel: string; insulinUnits: string | null; carbs: number | null; rpe: number | null; notes?: string | null; }
+export interface BiometricsDoc extends BaseDoc { timestamp: Date; bgLevel: string; insulinUnits: string | null; carbs: number | null; rpe: number | null; context?: "fasting" | "pre_meal" | "post_meal" | "pre_workout" | "post_workout" | "bedtime" | "other"; source?: "manual" | "healthkit" | "import"; tags?: string[]; notes?: string | null; }
 export interface TelemetryDoc extends BaseDoc { timestamp: Date; type: string; distanceKm: string; paceSeconds: number | null; elevationGainM: number | null; avgHr: number | null; rpe: number | null; splits?: string | null; notes?: string | null; }
 export interface NutritionDoc extends BaseDoc { timestamp: Date; itemName: string; itemType: "food" | "drink"; quantity: number; unit: string; carbsGrams: number; proteinGrams: number | null; fatGrams: number | null; calories: number | null; mealType: string | null; notes?: string | null; }
 export interface SleepLogDoc extends BaseDoc { timestamp: Date; bedtime: Date | null; wakeTime: Date | null; quality: number | null; totalHours: string | null; }

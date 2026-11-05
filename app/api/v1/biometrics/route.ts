@@ -13,6 +13,9 @@ const schema = z.object({
   insulinUnits: z.union([z.string(), z.number()]).nullable().optional(),
   carbs: z.union([z.string(), z.number()]).nullable().optional(),
   rpe: z.union([z.string(), z.number()]).nullable().optional(),
+  context: z.enum(["fasting", "pre_meal", "post_meal", "pre_workout", "post_workout", "bedtime", "other"]).optional(),
+  source: z.enum(["manual", "healthkit", "import"]).optional(),
+  tags: z.array(z.string().min(1).max(30)).max(8).optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -57,6 +60,9 @@ export async function POST(request: Request) {
           insulinUnits: body.insulinUnits == null ? null : String(body.insulinUnits),
           carbs: body.carbs == null ? null : Number(body.carbs),
           rpe: body.rpe == null ? null : Number(body.rpe),
+          context: body.context ?? "other",
+          source: body.source ?? "manual",
+          tags: body.tags ?? [],
           notes: body.notes ? encryptText(body.notes, env.FIELD_ENCRYPTION_SECRET) : null,
           createdAt: now,
           updatedAt: now,

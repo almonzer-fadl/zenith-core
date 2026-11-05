@@ -12,6 +12,7 @@ const createRuleSchema = z.object({
   enabled: z.boolean(),
   times: z.array(z.string().regex(/^([01]\\d|2[0-3]):([0-5]\\d)$/)).min(1).max(6),
   severity: z.enum(["normal", "high"]).default("normal"),
+  doseHint: z.string().max(80).nullable().optional(),
 });
 
 export async function GET(request: Request) {
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
           enabled: body.enabled,
           times: body.times,
           severity: body.severity,
+          doseHint: body.doseHint ?? null,
           updatedAt: now,
         },
         $setOnInsert: { createdAt: now },
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
       requestId,
       ip: request.headers.get("x-forwarded-for"),
       userAgent: request.headers.get("user-agent"),
-      meta: { domain: body.domain, enabled: body.enabled, severity: body.severity },
+      meta: { domain: body.domain, enabled: body.enabled, severity: body.severity, doseHint: body.doseHint ?? null },
     });
 
     return ok(result, 201, requestId);

@@ -12,6 +12,7 @@ const updateRuleSchema = z.object({
   enabled: z.boolean().optional(),
   times: z.array(z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/)).min(1).max(6).optional(),
   severity: z.enum(["normal", "high"]).optional(),
+  doseHint: z.string().max(80).nullable().optional(),
 });
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
